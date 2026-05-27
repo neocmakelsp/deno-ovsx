@@ -23,7 +23,7 @@
     "@std/media-types": "jsr:@std/media-types@^1.1.0",
     "@std/path": "jsr:@std/path@^1.1.5",
     "@vscode/vsce": "npm:@vscode/vsce@^3.7.1",
-    "@zip-js/zip-js": "jsr:@zip-js/zip-js@^2.8.24",
+    "@zip-js/zip-js": "jsr:@zip-js/zip-js@^2.8.26",
     "esbuild": "npm:esbuild@^0.27.3",
     "ovsx": "npm:ovsx@^0.10.9"
   },
