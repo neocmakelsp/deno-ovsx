@@ -25,7 +25,7 @@
     "@vscode/vsce": "npm:@vscode/vsce@^3.9.1",
     "@zip-js/zip-js": "jsr:@zip-js/zip-js@^2.8.26",
     "esbuild": "npm:esbuild@^0.27.3",
-    "ovsx": "npm:ovsx@^0.10.9"
+    "ovsx": "npm:ovsx@^1.0.2"
   },
   "fmt": {
     "exclude": [
