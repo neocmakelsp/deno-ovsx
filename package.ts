@@ -48,6 +48,8 @@ const LINK_REGEX = /(!?)\[([^\]\[]*|!\[[^\]\[]*]\([^\)]+\))\]\(([^\)]+)\)/g;
 
 const README_FILES = ["README.md", "readme.md"];
 
+const PACKAGE_JSON = "package.json";
+
 export interface PackageInfo {
   fileName: string;
   entries: Entry[];
@@ -78,6 +80,42 @@ async function readReadme(dir_entry: string): Promise<Optional<string>> {
     const data = await Deno.readFile(readme_path);
     return DECODE.decode(data);
   }
+}
+async function genPackageJson(
+  dir_entry: string,
+): Promise<Optional<string>> {
+  const dir_path = path.resolve(dir_entry);
+  const vscodeJson = path.join(dir_path, "vscode_package.json");
+  if (!await exists(vscodeJson)) {
+    warn("Cannot find vscode_package.json");
+    return undefined;
+  }
+  const denoJson = path.join(dir_path, "deno.json");
+  if (!await exists(denoJson)) {
+    warn("Cannot find deno.json");
+    return undefined;
+  }
+  const vscodeUrl = new URL("file://" + vscodeJson);
+  const denoUrl = new URL("file://" + denoJson);
+  const responseVscode = await fetch(vscodeUrl);
+  if (!responseVscode.ok) {
+    warn("error: ", responseVscode.statusText);
+    return undefined;
+  }
+  const vscodeData = await responseVscode.json();
+  const responseDeno = await fetch(denoUrl);
+  if (!responseDeno.ok) {
+    warn("error: ", responseDeno.statusText);
+    return undefined;
+  }
+  const denoData = await responseDeno.json();
+  const version = denoData["version"];
+  if (typeof version != "string") {
+    warn("error: version field does not exist in deno.json");
+    return undefined;
+  }
+  vscodeData["version"] = version;
+  return JSON.stringify(vscodeData, null, 2);
 }
 
 async function rewriteReadme(
@@ -139,14 +177,21 @@ async function rewriteReadme(
 async function packageVSIX(
   dir_entry: string,
   dir_info: JsonInfo,
-): Promise<PackageInfo> {
+): Promise<PackageInfo | undefined> {
   const zipFileWriter: BlobWriter = new BlobWriter();
 
   const zipWriter = new ZipWriter(zipFileWriter, {
     extendedTimestamp: false,
   });
+  const packageData = await genPackageJson(dir_entry);
 
-  const xml_content_types = XMLContentTypesDefault;
+  if (!packageData) {
+    return undefined;
+  }
+  const packageReader = new TextReader(packageData);
+  zipWriter.add(PACKAGE_JSON, packageReader);
+
+  const xmlContentTypes = XMLContentTypesDefault;
 
   const fileName = `${dir_info.name}-${dir_info.version}.vsix`;
 
@@ -155,16 +200,16 @@ async function packageVSIX(
 
   zipWriter.add(VSIX_MANIFEST, xmlVisxReader);
 
-  const rewrite_content = await rewriteReadme(dir_entry, dir_info);
-  if (rewrite_content) {
-    const readme_data = new TextReader(rewrite_content);
-    zipWriter.add(path.join("extension", README), readme_data);
+  const rewriteContent = await rewriteReadme(dir_entry, dir_info);
+  if (rewriteContent) {
+    const readmeData = new TextReader(rewriteContent);
+    zipWriter.add(path.join("extension", README), readmeData);
   }
 
-  await walkFileFilited(dir_entry, dir_info.main, zipWriter, xml_content_types);
+  await walkFileFilited(dir_entry, dir_info.main, zipWriter, xmlContentTypes);
 
   // deno-lint-ignore no-explicit-any
-  const contentTypeData = xml.stringify(xml_content_types as any);
+  const contentTypeData = xml.stringify(xmlContentTypes as any);
 
   const contentTypeReader = new TextReader(contentTypeData);
 
@@ -219,9 +264,7 @@ async function walkFileFilited(
           mime_types.set(ext, content_type);
         }
       }
-      if (entry.name == "vscode_package.json") {
-        await zipWriter.add("extension/package.json", fileReader);
-      } else if (entry.name == "LICENSE") {
+      if (entry.name == "LICENSE") {
         await zipWriter.add("extension/LICENSE.txt", fileReader);
       } else {
         await zipWriter.add(`extension/${filepath}`, fileReader);

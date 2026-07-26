@@ -5,6 +5,7 @@ import { warn } from "@std/log";
 import { escape } from "./utils.ts";
 
 const PACKAGE_JSON_NAME = "vscode_package.json";
+const DENO_JSON_NAME = "deno.json";
 const READMES = ["README.md", "readme.md"];
 const LICENSES = ["LICENSE", "LICENSE.txt"];
 
@@ -152,10 +153,8 @@ export interface JsonInfo {
 export async function projectDirReader(
   dir_path: URL,
 ): Promise<JsonInfo | undefined> {
-  const json_path = path.join(dir_path.pathname, PACKAGE_JSON_NAME);
   const info = await packageJsonReader(
     dir_path,
-    new URL("file://" + json_path),
   );
   if (!info) {
     return info;
@@ -182,8 +181,24 @@ export async function projectDirReader(
 
 async function packageJsonReader(
   dir_path: URL,
-  json_path: URL,
 ): Promise<JsonInfo | undefined> {
+  const vscodeUrl = new URL(
+    "file://" + path.join(dir_path.pathname, PACKAGE_JSON_NAME),
+  );
+  const denoUrl = new URL(
+    "file://" + path.join(dir_path.pathname, DENO_JSON_NAME),
+  );
+  const responseDeno = await fetch(denoUrl);
+  if (!responseDeno.ok) {
+    warn("error: ", responseDeno.statusText);
+    return undefined;
+  }
+  const denoData = await responseDeno.json();
+  const version = denoData["version"];
+  if (typeof version != "string") {
+    warn("error: version field does not exist in deno.json");
+    return undefined;
+  }
   let changelog: ChangeLog;
   if (await exists(path.join(dir_path, "CHANGELOG.md"))) {
     changelog = "extension/CHANGELOG.md";
@@ -193,11 +208,12 @@ async function packageJsonReader(
     warn("We need a changelog");
     return;
   }
-  const response = await fetch(json_path);
+  const response = await fetch(vscodeUrl);
   if (!response.ok) {
     return undefined;
   }
   const data = await response.json() as ManifestPackage;
+  data.version = version;
   return packageMainData(data, changelog);
 }
 
