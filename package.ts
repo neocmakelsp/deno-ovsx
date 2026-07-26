@@ -150,8 +150,7 @@ async function packageVSIX(
 
   const fileName = `${dir_info.name}-${dir_info.version}.vsix`;
 
-  // deno-lint-ignore no-explicit-any
-  const xmlVisxData = xml.stringify(genXmlvsixMinifest(dir_info) as any);
+  const xmlVisxData = xml.stringify(genXmlvsixMinifest(dir_info));
   const xmlVisxReader = new TextReader(xmlVisxData);
 
   zipWriter.add(VSIX_MANIFEST, xmlVisxReader);
