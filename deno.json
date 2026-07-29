@@ -21,7 +21,7 @@
     "@std/fs": "jsr:@std/fs@^1.0.24",
     "@std/log": "jsr:@std/log@^0.224.14",
     "@std/media-types": "jsr:@std/media-types@^1.1.0",
-    "@std/path": "jsr:@std/path@^1.1.5",
+    "@std/path": "jsr:@std/path@^1.1.6",
     "@vscode/vsce": "npm:@vscode/vsce@^3.9.2",
     "@zip-js/zip-js": "jsr:@zip-js/zip-js@^2.8.26",
     "esbuild": "npm:esbuild@^0.28.1",
