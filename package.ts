@@ -35,6 +35,7 @@ const excludeDirs = [
   /.vscodeignore/,
   /readme.md/,
   /README.md/,
+  /vscode_package.json/
 ];
 
 const DECODE = new TextDecoder("utf-8");
@@ -189,7 +190,7 @@ async function packageVSIX(
     return undefined;
   }
   const packageReader = new TextReader(packageData);
-  zipWriter.add(PACKAGE_JSON, packageReader);
+  zipWriter.add(`extension/${PACKAGE_JSON}`, packageReader);
 
   const xmlContentTypes = XMLContentTypesDefault;
 
